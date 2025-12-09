@@ -1,200 +1,76 @@
-# pyngn
+# pyngn: Python Neuro-Glia Networks
 
-# Especificação Formal: GHSNN-LSM Architecture
+**pyngn** (Python Neuro-Glia Networks) is a high-performance framework dedicated to **Gliomorphic Computing**, implementing the novel **3GSNN-LSM** (Triglial Spiking Neural Network - Liquid State Machine) architecture.
 
-## 1. Topologia do Sistema (O Hipergrafo)
+## What is 3GSNN-LSM?
 
-O sistema é representado por um **Grafo Dinâmico Dirigido e Ponderado** $\mathcal{G}(t) = (\mathcal{V}, \mathcal{E}(t))$, imerso em um espaço métrico tridimensional $\mathbb{R}^3$.
+Unlike traditional Spiking Neural Networks that rely solely on neuronal activity, the **3GSNN-LSM** model integrates a complex synaptic dynamic by orchestrating the interaction between fast-spiking neurons and three distinct glial agents:
 
-### 1.1 Conjunto de Vértices ($\mathcal{V}$)
-O conjunto total de nós é particionado em três subconjuntos funcionais:
+*   **Astrocytes**: For homeostatic gain control and memory reverberation.
+*   **Oligodendrocytes**: For adaptive temporal delays.
+*   **Microglia**: For structural plasticity and topological pruning.
 
-$\mathcal{V} = \mathcal{V}_{in} \cup \mathcal{V}_{res} \cup \mathcal{V}_{out}$
+This bio-inspired synergy allows `pyngn` to generate self-organizing, energy-efficient reservoirs capable of complex temporal processing and continuous adaptation, bridging the gap between biological plausibility and computational efficiency without relying on backpropagation through time.
 
-1.  **$\mathcal{V}_{in}$ (Input Layer):** $N_{in}$ neurônios transdutores virtuais.
-2.  **$\mathcal{V}_{res}$ (Reservoir):** $N_{res}$ neurônios excitatórios e inibitórios (proporção típica 80/20) organizados esparsamente.
-3.  **$\mathcal{V}_{out}$ (Readout):** $N_{out}$ unidades integradoras para decodificação.
+## Project Structure
 
-### 1.2 Espaço de Estado ($\Psi$)
-O estado global do sistema no instante $t$ é definido pela tupla:
-$$ \Psi(t) = \langle \mathbf{u}(t), \mathbf{s}(t), \mathbf{M}(t), \mathbf{W}, \mathbf{D}(t), \mathbf{c}(t), \mathbf{\gamma}(t), \mathbf{H}(t) \rangle $$
-
-*   **Variáveis Neurais (Rápidas):**
-    *   $\mathbf{u} \in \mathbb{R}^{N_{res}}$: Potencial de membrana.
-    *   $\mathbf{s} \in \{0, 1\}^{N_{res}}$: Vetor de spikes (disparos).
-*   **Variáveis Sinápticas e Gliais (Lentas/Adaptativas):**
-    *   $\mathbf{M} \in \{0, 1\}^{N_{res} \times N_{res}}$: Matriz de Adjacência (Máscara Microglial).
-    *   $\mathbf{W} \in \mathbb{R}^{N_{res} \times N_{res}}$: Matriz de Pesos Sinápticos (Força base).
-    *   $\mathbf{D} \in \mathbb{N}^{N_{res} \times N_{res}}$: Matriz de Atrasos (Oligodendrócitos).
-    *   $\mathbf{c} \in \mathbb{R}^{N_{res}}$: Concentração de Cálcio Astrocitário.
-    *   $\mathbf{\gamma} \in \mathbb{R}^{N_{res}}$: Ganho Astrocitário (Modulação).
-    *   $\mathbf{H} \in [0, 1]^{N_{res} \times N_{res}}$: Saúde Sináptica.
-
----
-
-## 2. Dinâmica Neural (Escala de Tempo: $dt \approx 1ms$)
-
-A evolução do reservatório é governada pelo modelo **Leaky Integrate-and-Fire (LIF)** com injeção de corrente gliomórfica.
-
-### 2.1 Equação Diferencial do Potencial
-Para cada neurônio $i \in \mathcal{V}_{res}$:
-
-$$ \tau_m \frac{du_i(t)}{dt} = -(u_i(t) - u_{rest}) + R \cdot I_{total}(i, t) $$
-
-Onde:
-*   $\tau_m$: Constante de tempo da membrana.
-*   $u_{rest}$: Potencial de repouso.
-*   $R$: Resistência de membrana (normalmente normalizada para 1).
-
-### 2.2 Mecanismo de Disparo (Spiking)
-$$
-s_i(t) =
-\begin{cases}
-1 & \text{se } u_i(t) \geq \theta_{thresh} \text{ e } t > t_{last\_spike} + t_{ref} \\
-0 & \text{caso contrário}
-\end{cases}
-$$
-Após o disparo ($s_i(t)=1$), ocorre o reset: $u_i(t) \leftarrow u_{reset}$.
-
-### 2.3 A Corrente Pentasináptica ($I_{total}$)
-Esta equação integra a contribuição de todos os agentes. A corrente total recebida pelo neurônio $i$ é a soma da entrada externa e da recorrência interna modulada:
-
-$$ I_{total}(i, t) = I_{ext}(i, t) + \underbrace{\gamma_i(t)}_{\text{Astrócito}} \cdot \sum_{j \in \mathcal{V}_{res}} \underbrace{M_{ij}(t)}_{\text{Microglia}} \cdot w_{ij} \cdot \underbrace{s_j(t - D_{ij}(t))}_{\text{Oligodendrócito}} $$
-
----
-
-## 3. Dinâmicas Gliais (Escalas de Tempo: $10ms \to 1000s$)
-
-Os componentes gliais não processam o sinal diretamente, mas modulam os parâmetros da equação pentasináptica.
-
-### 3.1 Astrócitos: Homeostase de Ganho (Regulador PID Químico)
-O astrócito monitora a taxa de disparo local e ajusta o ganho global ($\gamma$) do neurônio para manter o reservatório na "Borda do Caos" (regime crítico).
-
-*   **Integração de Cálcio (Filtro Passa-Baixa):**
-    $$ \tau_{Ca} \frac{dc_i(t)}{dt} = -c_i(t) + s_i(t) $$
-    *(O nível de cálcio $c_i$ é uma média móvel da atividade elétrica).*
-
-*   **Regra de Controle de Ganho ($\gamma$):**
-    O objetivo é manter $c_i$ próximo de um *Set Point* ($\rho_{target}$).
-    $$ \gamma_i(t+1) = \gamma_i(t) + \eta_{astro} \cdot (\rho_{target} - c_i(t)) $$
-    *   **Lógica:** Se a atividade é baixa ($c < \rho$), o termo é positivo $\to$ Ganho aumenta. Se alta, Ganho diminui.
-    *   **Restrição:** $\gamma_i \in [\gamma_{min}, \gamma_{max}]$.
-
-### 3.2 Oligodendrócitos: Plasticidade de Atraso (Delay Learning)
-Oligodendrócitos ajustam a velocidade de condução (atraso $D_{ij}$) para enriquecer a diversidade temporal do reservatório.
-
-*   **Atualização Estocástica Baseada em Correlação:**
-    A cada intervalo $T_{oligo}$:
-    Seja $Corr(i, j)$ a correlação de disparos entre pré e pós-sináptico.
-    $$ D_{ij}(t+1) = D_{ij}(t) + \Delta D $$
-    $$
-    \Delta D =
-    \begin{cases}
-    +1 & \text{se } P < p_{mut} \text{ (Drift aleatório para exploração)} \\
-    -sgn(t_{spike}^i - (t_{spike}^j + D_{ij})) & \text{se } |Corr| > \theta_{sync} \text{ (Ajuste fino STDP)} \\
-    0 & \text{caso contrário}
-    \end{cases}
-    $$
-    *   **Objetivo:** Evitar que todos os sinais cheguem ao mesmo tempo (sincronia excessiva) ou aleatoriamente demais. Cria uma "memória de delay".
-
-### 3.3 Microglia: Computação Morfológica (Poda e Manutenção)
-A Microglia define a topologia ativa $\mathbf{M}$ baseada na eficiência energética.
-
-*   **Variável de Saúde ($H_{ij}$):**
-    Acumula "crédito" quando a sinapse transmite um spike útil (pré dispara e pós dispara logo depois).
-    $$ H_{ij}(t) = (1-\beta)H_{ij}(t-1) + \beta \cdot (s_i(t) \cdot s_j(t - D_{ij})) - \lambda_{metabolica} $$
-    *   $\lambda_{metabolica}$: Custo fixo de manter uma conexão viva.
-
-*   **Regra de Poda (Pruning):**
-    A cada intervalo $T_{micro}$:
-    $$
-    M_{ij}(t) =
-    \begin{cases}
-    0 & \text{se } H_{ij}(t) < \theta_{death} \text{ (Fagocitose)} \\
-    1 & \text{se } H_{ij}(t) > \theta_{life} \\
-    M_{ij}(t-1) & \text{caso contrário (Histerese)}
-    \end{cases}
-    $$
-
----
-
-## 4. Readout e Aprendizado (A Interface)
-
-A camada de saída não afeta a dinâmica interna do reservatório (em modo LSM padrão), apenas observa e interpreta.
-
-*   **Vetor de Estado Líquido ($\mathbf{x}$):**
-    Como $s(t)$ é discreto/esparso, o readout lê os traços sinápticos (correntes pós-sinápticas):
-    $$ \tau_{read} \frac{d\mathbf{x}(t)}{dt} = -\mathbf{x}(t) + \mathbf{s}(t) $$
-
-*   **Equação de Saída ($\mathbf{y}$):**
-    $$ \mathbf{y}(t) = \mathbf{W}_{out} \cdot \mathbf{x}(t) $$
-
-*   **Treinamento (Ridge Regression ou Delta Rule):**
-    A matriz $\mathbf{W}_{out}$ é ajustada para minimizar o erro quadrático médio entre $\mathbf{y}(t)$ e o alvo $target(t)$.
-    $$ \Delta \mathbf{W}_{out} = \eta \cdot (target(t) - \mathbf{y}(t)) \cdot \mathbf{x}(t)^T $$
-
----
-
-## 5. Algoritmo de Implementação (Pseudo-Código Otimizado)
-
-Para implementação eficiente, recomenda-se o uso de operações matriciais (GPU/TPU) e buffers circulares para os atrasos.
-
-```python
-# Estruturas de Dados
-N = N_res
-Buffer_Spikes = Matrix[Max_Delay + 1, N]  # Histórico de spikes (Ring Buffer)
-Cursor = 0  # Ponteiro atual do buffer
-
-# Loop Principal (dt step)
-For t in Simulation_Time:
-    
-    # 1. Obter Spikes Atrasados (Acesso Oligodendrocítico)
-    # A matriz D define 'quantos passos atrás' olhar para cada par (j, i)
-    # Spikes_Effective[j, i] = Buffer_Spikes[Cursor - D[j,i], j]
-    Spikes_In = Gather(Buffer_Spikes, D, Cursor) 
-    
-    # 2. Calcular Correntes (Integração Pentasináptica)
-    # W * M aplica a máscara microglial aos pesos
-    # Multiplica pelos spikes atrasados e soma
-    Current_Syn = Sum( (W * M) * Spikes_In, axis=pre_synaptic )
-    
-    # Aplica ganho Astrocitário ao neurônio pós-sináptico
-    Current_Total = I_ext + (Current_Syn * Gamma)
-    
-    # 3. Atualizar Neurônios (LIF)
-    U = U * decay + Current_Total
-    Spikes_Now = (U > Threshold).astype(float)
-    
-    # Reset e Refratariedade
-    U = Where(Spikes_Now, V_reset, U)
-    
-    # 4. Atualizar Buffer
-    Buffer_Spikes[Cursor] = Spikes_Now
-    Cursor = (Cursor + 1) % (Max_Delay + 1)
-    
-    # 5. Dinâmicas Lentas (Executadas condicionalmente)
-    
-    # Astrócitos (Todo passo ou subsampling)
-    Calcium = Calcium * ca_decay + Spikes_Now
-    Gamma += learning_rate * (Target_Rate - Calcium)
-    
-    # Microglia (A cada T_micro passos)
-    If (t % T_micro == 0):
-        Health += (Spikes_Now * Spikes_Delayed) - Metabolic_Cost
-        M = Where(Health < Death_Thresh, 0, M)
-         
-    # Readout
-    X_trace = X_trace * trace_decay + Spikes_Now
-    Y_out = Dot(W_out, X_trace)
-    
-    # Aprendizado Online (se houver target)
-    If Training:
-        Error = Target - Y_out
-        W_out += alpha * Outer(Error, X_trace)
+```text
+pyngn-project/
+├── pyngn/                  # Core System Source Code
+│   ├── __init__.py
+│   ├── neuron.py           # LIF Dynamics and Base Tensors
+│   ├── glia.py             # Glial Controllers (Astro, Oligo, Micro)
+│   ├── synapse.py          # Weight Management and Delay Buffers
+│   ├── reservoir.py        # Orchestrator Class (3GSNN)
+│   └── readout.py          # Readout Layer (Ridge Regression/Delta)
+├── tests/                  # Unit Tests (pytest)
+├── notebooks/              # Experimentation and Benchmarks
+├── pyproject.toml          # Build Configuration
+└── README.md
 ```
 
-## Considerações Finais sobre a Implementação
+## Installation
 
-1.  **Esparsidade:** A matriz $\mathbf{M}$ será predominantemente zero (esparsidade > 90%). Implementações devem usar formatos de matriz esparsa (CSR/CSC) ou listas de adjacência para eficiência de memória.
-2.  **Buffers de Delay:** O maior gargalo de memória é a matriz $\mathbf{D}$ e o buffer circular. Limitar $D_{max}$ é crucial para performance.
-3.  **Estabilidade:** O ganho astrocitário ($\gamma$) é a chave para evitar que a rede "exploda" ou "apague". Parâmetros iniciais de $\eta_{astro}$ devem ser baixos para evitar oscilações bruscas.
+```bash
+pip install pyngn
+```
+
+## Basic Usage
+
+Here is a simple example demonstrating a layer of LIF neurons with synaptic delays (Oligodendrocytes):
+
+```python
+import torch
+from pyngn.neuron import LIFLayer
+from pyngn.synapse import DelayBuffer
+
+# 1. Initialize Layers
+n_neurons = 5
+# Create a layer of 5 LIF neurons
+layer = LIFLayer(n_neurons=n_neurons, tau_m=20.0, v_th=1.0)
+# Create a delay buffer for these neurons
+buffer = DelayBuffer(n_neurons=n_neurons, max_delay=10)
+
+# 2. Define Connectivity and Delays
+# Example: 5 neurons, each connected to others with specific delays
+# Here we simulate a dummy delay matrix for demonstration
+delays = torch.randint(1, 10, (n_neurons, n_neurons))
+
+# 3. Simulation Loop
+for t in range(100):
+    # Retrieve delayed spikes from the past based on the delay matrix
+    delayed_spikes = buffer.get_delayed_spikes(delays)
+    
+    # Calculate input current
+    # Summing spikes from pre-synaptic neurons (simplified weight=1.0)
+    i_syn = delayed_spikes.sum(dim=0) 
+    
+    # Update neuron state
+    spikes = layer.forward(i_syn=i_syn)
+    
+    # Push new spikes to buffer
+    buffer.push(spikes)
+    
+    if t % 10 == 0:
+        print(f"Time {t}: Active Neurons {spikes.sum().item()}")
+```
