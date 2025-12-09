@@ -8,7 +8,7 @@ O sistema é representado por um **Grafo Dinâmico Dirigido e Ponderado** $\math
 
 ### 1.1 Conjunto de Vértices ($\mathcal{V}$)
 O conjunto total de nós é particionado em três subconjuntos funcionais:
-$$ \mathcal{V} = \mathcal{V}_{in} \cup \mathcal{V}_{res} \cup \mathcal{V}_{out} $$
+$$\mathcal{V} = \mathcal{V}_{in} \cup \mathcal{V}_{res} \cup \mathcal{V}_{out}$$
 
 1.  **$\mathcal{V}_{in}$ (Input Layer):** $N_{in}$ neurônios transdutores virtuais.
 2.  **$\mathcal{V}_{res}$ (Reservoir):** $N_{res}$ neurônios excitatórios e inibitórios (proporção típica 80/20) organizados esparsamente.
