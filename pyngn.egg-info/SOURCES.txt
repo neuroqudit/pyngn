@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 pyngn/__init__.py
+pyngn/glia.py
 pyngn/neuron.py
 pyngn/synapse.py
 pyngn.egg-info/PKG-INFO
@@ -8,5 +9,6 @@ pyngn.egg-info/SOURCES.txt
 pyngn.egg-info/dependency_links.txt
 pyngn.egg-info/requires.txt
 pyngn.egg-info/top_level.txt
+tests/test_glia.py
 tests/test_integration.py
 tests/test_neuron.py

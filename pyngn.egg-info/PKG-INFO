@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: pyngn
-Version: 0.2.0
+Version: 0.3.0
 Summary: Python Neuro-Glia Networks - 3GSNN-LSM Architecture
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
@@ -43,7 +43,9 @@ $$ I_{total}(i, t) = I_{ext}(i, t) + \underbrace{\gamma_i(t)}_{\text{Astrocyte}}
 
 ### 2. Glial Dynamics
 *   **Astrocytes (Homeostasis)**: Regulate gain $\gamma_i$ based on calcium integration to maintain the reservoir at the "Edge of Chaos".
+  
     $$ \gamma_i(t+1) = \gamma_i(t) + \eta_{astro} \cdot (\rho_{target} - c_i(t)) $$
+    
 *   **Oligodendrocytes (Delays)**: Adjust conduction delays $D_{ij}$ to create temporal diversity and memory.
 *   **Microglia (Pruning)**: Optimize topology $M_{ij}$ by pruning energy-inefficient synapses based on Hebbian-like health tracking.
 
