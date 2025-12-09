@@ -182,7 +182,7 @@ For t in Simulation_Time:
     If (t % T_micro == 0):
         Health += (Spikes_Now * Spikes_Delayed) - Metabolic_Cost
         M = Where(Health < Death_Thresh, 0, M)
-        
+         
     # Readout
     X_trace = X_trace * trace_decay + Spikes_Now
     Y_out = Dot(W_out, X_trace)
