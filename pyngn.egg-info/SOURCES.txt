@@ -3,6 +3,7 @@ pyproject.toml
 pyngn/__init__.py
 pyngn/glia.py
 pyngn/neuron.py
+pyngn/readout.py
 pyngn/synapse.py
 pyngn.egg-info/PKG-INFO
 pyngn.egg-info/SOURCES.txt
@@ -12,3 +13,4 @@ pyngn.egg-info/top_level.txt
 tests/test_glia.py
 tests/test_integration.py
 tests/test_neuron.py
+tests/test_readout.py

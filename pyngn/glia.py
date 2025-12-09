@@ -67,3 +67,94 @@ class AstrocyteController(nn.Module):
     def reset_state(self):
         self.calcium.zero_()
         self.gamma.fill_(1.0)
+
+class MicrogliaController(nn.Module):
+    """
+    Microglia Controller for Structural Plasticity (Pruning).
+    
+    Dynamics:
+    1. Synaptic Health Tracking (Hebbian-like):
+       H[t+1] = H[t] + eta_micro * (pre[t] * post[t] - decay * H[t])
+       (Synapses that successfully drive post-synaptic spikes are "healthy")
+       
+    2. Pruning:
+       If H_ij < threshold, M_ij = 0 (Prune)
+       
+    3. Regeneration (Optional/Simplified):
+       Randomly re-enable synapses with low probability to explore topology?
+       For now, we implement Pruning only.
+    """
+    def __init__(self, n_neurons, pruning_threshold=0.1, eta_micro=0.01, health_decay=0.1, device='cpu'):
+        super().__init__()
+        self.n_neurons = n_neurons
+        self.pruning_threshold = pruning_threshold
+        self.eta_micro = eta_micro
+        self.health_decay = health_decay
+        self.device = device
+        
+        # Synaptic Health Matrix: [n_neurons, n_neurons]
+        # Initialized to 1.0 (fully healthy)
+        self.health = torch.ones(n_neurons, n_neurons, device=device)
+        
+        # Connectivity Mask: [n_neurons, n_neurons]
+        # 1 = Connected, 0 = Pruned
+        self.mask = torch.ones(n_neurons, n_neurons, device=device)
+        
+    def update(self, pre_spikes, post_spikes):
+        """
+        Update synaptic health and prune weak synapses.
+        
+        Args:
+            pre_spikes (torch.Tensor): [n_neurons] binary spike vector (t)
+            post_spikes (torch.Tensor): [n_neurons] binary spike vector (t)
+            
+        Returns:
+            torch.Tensor: Updated mask M[t+1]
+        """
+        if isinstance(pre_spikes, torch.Tensor):
+            pre_spikes = pre_spikes.to(self.device)
+        if isinstance(post_spikes, torch.Tensor):
+            post_spikes = post_spikes.to(self.device)
+            
+        # Hebbian term: pre[i] * post[j]
+        # We want matrix [i, j] where i is pre, j is post?
+        # Usually weights are W[post, pre] or W[pre, post]?
+        # In neuron.py: sum_{j} M_{ij} * w_{ij} * s_j
+        # This implies i is post, j is pre.
+        # So W is [n_post, n_pre] or we index W[i, j].
+        # Let's assume W[i, j] means connection j -> i (pre=j, post=i).
+        # So Hebbian = pre[j] * post[i]
+        
+        # Outer product: post.unsqueeze(1) * pre.unsqueeze(0) -> [post, pre]
+        # Let's stick to W[i, j] = j -> i
+        
+        hebbian = torch.outer(post_spikes, pre_spikes)
+        
+        # Update Health
+        # H[t+1] = H[t] + eta * (Hebbian - decay * H[t])
+        delta_h = self.eta_micro * (hebbian - self.health_decay * self.health)
+        
+        # Only update health for currently active connections? 
+        # Or do we track health even for pruned ones (latent)?
+        # Let's track for all, but maybe decay dominates if disconnected.
+        self.health = self.health + delta_h
+        
+        # Clamp Health to [0, 1]
+        self.health = torch.clamp(self.health, 0.0, 1.0)
+        
+        # Pruning
+        # If H < threshold, M = 0
+        # If H >= threshold, M = 1 (Recovery? Or once pruned, stays pruned?)
+        # "Structural Plasticity" usually implies both.
+        # Let's allow recovery if health goes back up (e.g. random fluctuations or if we add noise).
+        # But with just decay, it won't go back up if M=0 implies no transmission?
+        # Wait, if M=0, pre*post might still happen due to other inputs!
+        # So "Latent" synapses can recover if correlated activity appears.
+        
+        self.mask = (self.health >= self.pruning_threshold).float()
+        
+        return self.mask
+
+    def reset_state(self):
+        self.health.fill_(1.0)
+        self.mask.fill_(1.0)
