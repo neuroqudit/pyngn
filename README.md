@@ -12,6 +12,23 @@ Unlike traditional Spiking Neural Networks that rely solely on neuronal activity
 
 This bio-inspired synergy allows `pyngn` to generate self-organizing, energy-efficient reservoirs capable of complex temporal processing and continuous adaptation, bridging the gap between biological plausibility and computational efficiency without relying on backpropagation through time.
 
+## Dynamics
+
+The system is modeled as a **Dynamic Directed Weighted Graph** $\mathcal{G}(t)$ in 3D space.
+
+### 1. Neural Dynamics (LIF)
+The reservoir uses the **Leaky Integrate-and-Fire** model with a "Pentasynaptic Current" that integrates all glial contributions:
+
+$$ \tau_m \frac{du_i(t)}{dt} = -(u_i(t) - u_{rest}) + R \cdot I_{total}(i, t) $$
+
+$$ I_{total}(i, t) = I_{ext}(i, t) + \underbrace{\gamma_i(t)}_{\text{Astrocyte}} \cdot \sum_{j} \underbrace{M_{ij}(t)}_{\text{Microglia}} \cdot w_{ij} \cdot \underbrace{s_j(t - D_{ij}(t))}_{\text{Oligodendrocyte}} $$
+
+### 2. Glial Dynamics
+*   **Astrocytes (Homeostasis)**: Regulate gain $\gamma_i$ based on calcium integration to maintain the reservoir at the "Edge of Chaos".
+    $$ \gamma_i(t+1) = \gamma_i(t) + \eta_{astro} \cdot (\rho_{target} - c_i(t)) $$
+*   **Oligodendrocytes (Delays)**: Adjust conduction delays $D_{ij}$ to create temporal diversity and memory.
+*   **Microglia (Pruning)**: Optimize topology $M_{ij}$ by pruning energy-inefficient synapses based on Hebbian-like health tracking.
+
 ## Project Structure
 
 ```text
