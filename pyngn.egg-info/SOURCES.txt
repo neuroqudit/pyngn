@@ -4,6 +4,7 @@ pyngn/__init__.py
 pyngn/glia.py
 pyngn/neuron.py
 pyngn/readout.py
+pyngn/reservoir.py
 pyngn/synapse.py
 pyngn.egg-info/PKG-INFO
 pyngn.egg-info/SOURCES.txt
