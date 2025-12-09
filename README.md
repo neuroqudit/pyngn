@@ -25,7 +25,9 @@ $$ I_{total}(i, t) = I_{ext}(i, t) + \underbrace{\gamma_i(t)}_{\text{Astrocyte}}
 
 ### 2. Glial Dynamics
 *   **Astrocytes (Homeostasis)**: Regulate gain $\gamma_i$ based on calcium integration to maintain the reservoir at the "Edge of Chaos".
+  
     $$ \gamma_i(t+1) = \gamma_i(t) + \eta_{astro} \cdot (\rho_{target} - c_i(t)) $$
+    
 *   **Oligodendrocytes (Delays)**: Adjust conduction delays $D_{ij}$ to create temporal diversity and memory.
 *   **Microglia (Pruning)**: Optimize topology $M_{ij}$ by pruning energy-inefficient synapses based on Hebbian-like health tracking.
 
